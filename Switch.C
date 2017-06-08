@@ -6,9 +6,10 @@ void SubFittingBackground(int binl,int binr,double *sum_val)
 {
 	// int binl=12;
 	// int binr=23;
+	int i_par=9;
 	double scale_value;
 	double bdf_SFB;
-	double par[10];
+	double par[i_par];
 	double y_min;
 	double y_max;
 
@@ -16,47 +17,35 @@ void SubFittingBackground(int binl,int binr,double *sum_val)
 	TH1F* ProfExc=new TH1F("ProfExc","Profile in charge without excluded points",N_STRIPS,1,33);
 	TGraph *TG_Prof_Exc=new TGraph();
 	TGraph *TG_Post=new TGraph();
-	// TF1* PolNProfile=new TF1("PolNProfile","pol5",2,31);
 	TF1* PolNProfile=new TF1("PolNProfile","pol8",2,31);
 
 	for(int i=FIRST_ELEC;i<LAST_ELEC;i++)
 	{
-		// scale_value=(2.*(PreSFB[i]-min)/(max-min)-1.);
 		scale_value=PreSFB[i];
 		Profile->SetBinContent(i+1,PreSFB[i]);
-		// ProfExc->SetBinContent(i+1,scale_value);
 		if(i+1<=binl||i+1>=binr)
 		{
-			// PolNProfile->RejectPoint(kTRUE);
 			ProfExc->SetBinContent(i+1,scale_value);
 			TG_Prof_Exc->SetPoint(i,i+1,scale_value);
-			// ProfExc->SetBinError(i+1,0);
 		}
 	}
 	ProfExc->Fit(PolNProfile,"Q");
 
-	par[0]=PolNProfile->GetParameter(0);
-	par[1]=PolNProfile->GetParameter(1);
-	par[2]=PolNProfile->GetParameter(2);
-	par[3]=PolNProfile->GetParameter(3);
-	par[4]=PolNProfile->GetParameter(4);
-	par[5]=PolNProfile->GetParameter(5);
-	par[6]=PolNProfile->GetParameter(6);
-	par[7]=PolNProfile->GetParameter(7);
-	par[8]=PolNProfile->GetParameter(8);
-	// par[9]=PolNProfile->GetParameter(9);
-	
+	for(int ii=0;ii<i_par;ii++)
+		par[ii]=PolNProfile->GetParameter(ii);
+
 	*sum_val=0.;
 	for(int i=FIRST_ELEC;i<LAST_ELEC;i++)
 	{
 		double x=i+1.5;
 		PostSFBprim[i]=PostSFB[i];
-		// bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5);
-		bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5)+par[6]*pow(x,6)+par[7]*pow(x,7)+par[8]*pow(x,8);
-		// bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5)+par[6]*pow(x,6)+par[7]*pow(x,7)+par[8]*pow(x,8)+par[9]*pow(x,9);
+		bdf_SFB=0.;
+		for(int ii=0;ii<i_par;ii++)
+			bdf_SFB+=par[ii]*pow(x,ii);
 		PostSFB[i]=PreSFB[i]-bdf_SFB;
 		if(i+1>binl&&i+1<binr)
 			*sum_val+=PostSFB[i];
+		// *sum_val=TMath::Max(*sum_val,0.);
 	}
 
 	Profile->Delete();
@@ -79,6 +68,10 @@ int main(int argc, char** argv)
 	faster_data_p data;
 	electrometer_data electro;
 
+	EOFFX.resize(N_STRIPS);
+	EOFFX.clear();
+	EOFFY.resize(N_STRIPS);
+	EOFFY.clear();
 	PreSFB.resize(N_STRIPS);
 	PostSFB.resize(N_STRIPS);
 	PreSFBprim.resize(N_STRIPS);
@@ -87,8 +80,11 @@ int main(int argc, char** argv)
 	double* vect_time_tot=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* vect_charge_cumul=(double*)malloc(MAX_INTEGR*sizeof(double));
 
+	bool bckg=false;
 	unsigned short label;
 	int count=0;
+	int count_eoffx=0;
+	int count_eoffy=0;
 	int isLabelX=0;
 	int isLabelY=0;
 	int integration=400;
@@ -96,6 +92,7 @@ int main(int argc, char** argv)
 	double calib=1.;
 	double fasterTime=0.;
 	double time_limit;
+	double eoff_limit=10.;
 	double charge;
 	double val;
 	double sum_val=0.;
@@ -276,6 +273,8 @@ int main(int argc, char** argv)
 	writer=faster_file_writer_open(outname);
 	brkg_condition=false;
 
+	count_eoffx=0;
+	count_eoffy=0;
 	while((data=faster_file_reader_next(reader))!=NULL) 
 	// while((data=faster_file_reader_next(reader))!=NULL&&brkg_condition==false) 
 	{
@@ -283,7 +282,6 @@ int main(int argc, char** argv)
 		if(t0==-1)
 			t0=faster_data_clock_sec(data);
 		fasterTime=faster_data_clock_sec(data)-t0;
-
 		PreSFB.clear();
 		PostSFB.clear();
 		label=faster_data_label(data);
@@ -297,23 +295,53 @@ int main(int argc, char** argv)
 				{
 					case LabelX:
 						PreSFBprim[j]=PreSFB[j];
-						val=charge-offXY[j][0];
+						if(!bckg)
+						{
+							EOFFX[j]+=charge;
+							if(j==FIRST_ELEC)
+								count_eoffx++;
+							val=charge;
+							sum_val=0.;
+						}
+						else
+							val=charge-offXY[j][0];
 						PreSFB[j]=val;
 						isLabelX=1;
 					break;
 					case LabelY:
 						PreSFBprim[j]=PreSFB[j];
-						val=charge-offXY[j][1];
+						if(!bckg)
+						{
+							EOFFY[j]+=charge;
+							if(j==FIRST_ELEC)
+								count_eoffy++;
+							val=charge;
+							sum_val=0.;
+						}
+						else
+							val=charge-offXY[j][1];
 						PreSFB[j]=val;
 						isLabelY=1;
 					break;
 				}
 			}
-			SubFittingBackground(14,20,&sum_val);
+			if(bckg)
+				SubFittingBackground(14,20,&sum_val);
 			charge_totale+=calib*sum_val/2.;
 		}
 		if(isLabelX==1&&isLabelY==1)
 		{
+			if(fasterTime>eoff_limit&&bckg==false)
+			{
+				for(int j=FIRST_ELEC;j<LAST_ELEC;j++)
+				{
+					offXY[j][0]=EOFFX[j]/count_eoffx;
+					offXY[j][1]=EOFFY[j]/count_eoffy;
+					// cout<<j<<" "<<offXY[j][0]<<" "<<offXY[j][1]<<endl;
+				}
+				bckg=true;
+			}
+			// bckg=true;
 			vect_time_tot[count]=fasterTime;
 			vect_charge_cumul[count]=charge_totale;
 			if(charge_totale>dose_limit)
@@ -329,7 +357,6 @@ int main(int argc, char** argv)
 		
 			if(count%integration==0)
 			{
-				cout<<"Pilou "<<count<<endl;
 				for(int i=0;i<N_STRIPS;i++)
 				{
 					if(label==LabelX)
@@ -403,13 +430,27 @@ int main(int argc, char** argv)
 				stop_line->SetLineColor(2);
 				if(brkg_condition==true)
 					stop_line->DrawLine(time_limit,TG_ChargeTime->GetYaxis()->GetXmin()/1.1,time_limit,TG_ChargeTime->GetYaxis()->GetXmax()/1.1);
+				
 				pad6->cd();
+				pad6->Clear();
 				xt=.95;
 				yt=.95;
 				Texte->SetTextAlign(31);
-				Texte->SetTextColor(1);
 				Texte->SetTextFont(43);
 				Texte->SetTextSize(15);
+				if(!bckg)
+				{
+					Texte->SetTextColor(2);
+					Texte->DrawText(xt,yt,"Acquisition");
+					yt-=ydecal;
+					Texte->DrawText(xt,yt,"bruit electronique");
+					yt-=ydecal;
+					text_tmp.Form("%2.2lf sec",eoff_limit-time_limit);
+					Texte->DrawText(xt,yt,text_tmp);
+					yt-=ydecal;
+					yt-=ydecal;
+				}
+				Texte->SetTextColor(1);
 				Texte->DrawText(xt,yt,"Charge limite");
 				yt-=ydecal;
 				text_tmp.Form("%2.2lf pC",dose_limit);

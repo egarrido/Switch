@@ -47,6 +47,9 @@
 std::vector<string> Variable_init;
 std::vector<double> Value_init;
 
+std::vector<double> EOFFX;
+std::vector<double> EOFFY;
+
 std::vector<double> PreSFB;
 std::vector<double> PostSFB;
 
