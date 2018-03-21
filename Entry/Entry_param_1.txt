@@ -1,3 +1,15 @@
-File: C_10000_position_pt_1_0001.fast
-Path for the file: /home/garrido/Dosion/Cyrce/04_2017/
-Time sampling (s): 1.
+Tube: Tube_0001.fast
+Path for the tube: /home/garrido/Dosion/DATA/
+Output file: Out_file.fast
+Path for the file: ./Output/
+Background extraction: yes
+Acquisition time for electronic offset (s): 20.
+Fitting function: yes
+Exclusion strips X: 15 17
+Exclusion strips Y: 10 20
+Calibrate data: 0.01
+Particle energy: 100.
+Map 2D: yes
+Limit: file s Entry/Limit.txt
+Integration time (s): 1.
+Smoothing: no

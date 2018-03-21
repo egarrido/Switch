@@ -1,3 +1,3 @@
 #!/bin/bash
-rm -f ../DATA/Tube.fast
-mkfifo ../DATA/Tube.fast
+rm -f ../DATA/Tube_0001.fast
+mkfifo ../DATA/Tube_0001.fast
