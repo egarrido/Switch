@@ -56,6 +56,9 @@ std::vector<double> PostSFB;
 std::vector<double> PreSFBprim;
 std::vector<double> PostSFBprim;
 
+std::vector<double> Integrated_X;
+std::vector<double> Integrated_Y;
+
 string data_folder;
 string data_faster_tube_file;
 string data_faster_out_file;
@@ -86,6 +89,7 @@ int lissage_param=0;
 int energy_used=0;
 int calibrage_used=0;
 int limit_used=0;
+int integration_used=0;
 int area_find_param=0;
 int Strip_label;
 int Strip_number;
@@ -100,6 +104,8 @@ double itstimetofinish;
 double bound_eoff;
 double energy;
 double calib_entry;
+double refresh_time;
+double integration_time;
 double multiple_energy[25];
 double multiple_calib[25];
 double multiple_calib_th[25];
@@ -108,8 +114,6 @@ double multiple_limit[25];
 // const double SamplingTime=40e-6;  	// 40   us
 // const double SamplingTime=DBL_MAX;
 // const double SamplingTime=1.;
-double SamplingTime=1.;
-int nbSummedSample;
 const double default_offset=0.419;		// 0.418   pC
 const double defaultRange_pC=24;    	// 24   pC
 const double sizeStrip=0.3; 					// 0.3 cm

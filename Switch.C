@@ -58,10 +58,12 @@ void EntryParameters(int config_simu)
 	Value_init.push_back(0.);	//	11
 	Variable_init.push_back("Limit"); // 12
 	Value_init.push_back(0.);	//	12
-	Variable_init.push_back("Integration time (s)"); // 13
+	Variable_init.push_back("Refreshing time (s)"); // 13
 	Value_init.push_back(0.);	//	13
 	Variable_init.push_back("Smoothing"); // 14
 	Value_init.push_back(0.);	//	14
+	Variable_init.push_back("Integration"); // 15
+	Value_init.push_back(0.);	//	15
 
 
 	ifstream datafile_param(filename.c_str());
@@ -241,6 +243,11 @@ void EntryParameters(int config_simu)
 								// ind_cal--;
 								if(ind_cal>0)							
 									calibrage_used=5;
+								if(ind_cal==1)							
+								{
+									Value_init[ind_value]=multiple_calib[0];
+									calibrage_used=1;
+								}
 							}
 							if(!bufferofbuffer.compare("file"))
 							{
@@ -264,6 +271,11 @@ void EntryParameters(int config_simu)
 									calib_file.close();
 									if(ind_cal>0)							
 										calibrage_used=5;
+									if(ind_cal==1)							
+									{
+										Value_init[ind_value]=multiple_calib[0];
+										calibrage_used=1;
+									}
 								}
 							}
 						}
@@ -305,6 +317,11 @@ void EntryParameters(int config_simu)
 								// ind_en--;
 								if(ind_en>0)
 									energy_used=2;
+								if(ind_en==1)
+								{
+									energy=multiple_energy[0];
+									energy_used=1;
+								}
 							}
 							if(!bufferofbuffer.compare("file"))
 							{
@@ -328,6 +345,11 @@ void EntryParameters(int config_simu)
 									energy_file.close();
 									if(ind_en>0)
 										energy_used=2;
+									if(ind_en==1)
+									{
+										energy=multiple_energy[0];
+										energy_used=1;
+									}
 								}							
 							}
 						}
@@ -399,6 +421,11 @@ void EntryParameters(int config_simu)
 									limit_file.close();
 									if(ind_lim==0)
 											limit_used=0;
+									if(ind_lim==1)
+									{
+										itstimetofinish=multiple_limit[0];
+										limit_used-=10;
+									}
 								}							
 							}
 						}
@@ -435,6 +462,42 @@ void EntryParameters(int config_simu)
 							}
 						}
 					}
+
+					if(ind_value==15)
+					{
+						integration_used=false;
+						std::size_t found=buffer.find_first_of(' ');
+						std::string bufferofbuffer=buffer.substr(0,found);
+						if(!bufferofbuffer.compare("no"))
+							cout<<"No integration used"<<endl;
+						else
+						{
+							if(CheckDouble(bufferofbuffer)==1)
+							{
+								integration_time=(double)atof(bufferofbuffer.c_str());
+								buffer=buffer.substr(found+1);
+								found=buffer.find_first_of(' ');
+								bufferofbuffer=buffer.substr(0,found);
+								if(!bufferofbuffer.compare("ms"))
+								{
+									integration_time*=1.E-3;
+									integration_used=true;
+								}
+								if(!bufferofbuffer.compare("s")||!bufferofbuffer.compare("sec"))
+								{
+									integration_time*=1.;
+									integration_used=true;
+								}
+								if(integration_used==false)
+								{
+									cout<<"No or unknown unit; seconds used by default"<<endl;
+									integration_time*=1.;
+									integration_used=true;
+								}
+							}
+						}
+					}
+
 				}	
 				else
 					cout<<"Value not define for "<<variable<<". Keeping the default one: "<<Value_init[ind_value]<<". Maybe check the entry file."<<endl;
@@ -576,8 +639,8 @@ void EntryParameters(int config_simu)
 	}
 
 	ivar=13;
-	cout<<" "<<Variable_init[ivar]<<": "<<(int)Value_init[ivar]<<endl;
-	SamplingTime=Value_init[ivar];
+	cout<<" "<<Variable_init[ivar]<<": "<<setprecision(2)<<fixed<<Value_init[ivar]<<endl;
+	refresh_time=Value_init[ivar];
 
 	ivar=12;
 	string unit;
@@ -600,6 +663,12 @@ void EntryParameters(int config_simu)
 		cout<<" No smoothing applied"<<endl;
 	if(lissage_param==1)
 		cout<<" Smoothing applied"<<endl;
+
+	ivar=15;
+	if(integration_used==false)
+		cout<<" No time integration used"<<endl;
+	if(integration_used==true)
+		cout<<" Time integration of "<<setprecision(2)<<fixed<<integration_time<<" sec used"<<endl;
 
 	// // for(ivar=4;ivar<Variable_init.size();ivar++)
 	// // 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
@@ -627,8 +696,8 @@ void SubFittingBackground(int binl,int binr,double *sum_val)
 
 	for(int i=FIRST_ELEC;i<LAST_ELEC;i++)
 	{
-		scale_value=PreSFB[i];
-		Profile->SetBinContent(i+1,PreSFB[i]);
+		scale_value=PreSFB.at(i);
+		Profile->SetBinContent(i+1,PreSFB.at(i));
 		if(i+1<=binl||i+1>=binr)
 		{
 			ProfExc->SetBinContent(i+1,scale_value);
@@ -644,13 +713,13 @@ void SubFittingBackground(int binl,int binr,double *sum_val)
 	for(int i=FIRST_ELEC;i<LAST_ELEC;i++)
 	{
 		double x=i+1.5;
-		// PostSFBprim[i]=PostSFB[i];
+		// PostSFBprim.at(i)=PostSFB.at(i);
 		bdf_SFB=0.;
 		for(int ii=0;ii<i_par;ii++)
 			bdf_SFB+=par[ii]*pow(x,ii);
-		PostSFB[i]=PreSFB[i]-bdf_SFB;
+		PostSFB.at(i)=PreSFB.at(i)-bdf_SFB;
 		if(i+1>binl&&i+1<binr)
-			*sum_val+=PostSFB[i];
+			*sum_val+=PostSFB.at(i);
 		// *sum_val=TMath::Max(*sum_val,0.);
 	}
 
@@ -676,14 +745,22 @@ int main(int argc, char** argv)
 	faster_data_p data;
 	electrometer_data electro;
 
-	EOFFX.resize(N_STRIPS);
 	EOFFX.clear();
-	EOFFY.resize(N_STRIPS);
+	EOFFX.resize(N_STRIPS);
 	EOFFY.clear();
+	EOFFY.resize(N_STRIPS);
+	PreSFB.clear();
 	PreSFB.resize(N_STRIPS);
+	PostSFB.clear();
 	PostSFB.resize(N_STRIPS);
+	PreSFBprim.clear();
 	PreSFBprim.resize(N_STRIPS);
+	PostSFBprim.clear();
 	PostSFBprim.resize(N_STRIPS);
+	Integrated_X.clear();
+	Integrated_X.resize(N_STRIPS);
+	Integrated_Y.clear();
+	Integrated_Y.resize(N_STRIPS);
 
 	double* vect_time_tot=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* vect_charge_cumul=(double*)malloc(MAX_INTEGR*sizeof(double));
@@ -699,11 +776,13 @@ int main(int argc, char** argv)
 	int integration=400;
 	int binr;
 	int binl;
-	double t0=-1;
+	double t0=-1.;
+	double t_last_refresh=-1.;
+	double t_last_int=0.;
 	double calib=1.;
 	double fasterTime=0.;
 	double time_limit;
-	double dose_limit=1.;
+	double dose_limit=1000.;
 	double charge;
 	double val;
 	double sum_val=0.;
@@ -727,6 +806,7 @@ int main(int argc, char** argv)
 		printf("Tube de données bien ouvert\n");
 
 	Int_t w_canvas,h_canvas;
+	Int_t size_unit=250;
 	w_canvas=250;
 	h_canvas=250;
 	Double_t x0,x1,x2,x3,x4,y0,y1,y2,y3,it;
@@ -742,15 +822,55 @@ int main(int argc, char** argv)
 	TPad * pad5 = new TPad();
 	TPad * pad6 = new TPad();
 
+	TCanvas * cInte = new TCanvas();
+	TPad * pad_int0 = new TPad();
+	TPad * pad_int1 = new TPad();
+	TPad * pad_int2 = new TPad();
+	TPad * pad_int3 = new TPad();
+
+	if(integration_used==true)
+	{
+		cout<<"Fenêtre intégrale"<<endl;
+		w_canvas=4*size_unit;
+		h_canvas=2*size_unit;
+		cInte->Destructor();
+		cInte->Constructor("Integrale","",w_canvas,h_canvas);
+		// cInte->SetCanvasSize(w_canvas,h_canvas);
+		cInte->SetWindowSize(w_canvas*1.03,h_canvas*1.03);
+		x0=0.;	y0=0.;	x1=.33;	y1=.5;	x2=.84;	y2=1.;	x3=1.;
+		it=.00;
+		pad_int0->SetCanvas(cInte);
+		pad_int1->SetCanvas(cInte);
+		pad_int2->SetCanvas(cInte);
+		pad_int3->SetCanvas(cInte);
+		pad_int0->SetPad("pad_int0","pad_int0",x0+it,y0+it,x1-it,y1-it);
+		pad_int1->SetPad("pad_int1","pad_int1",x0+it,y1+it,x1-it,y2-it);
+		pad_int2->SetPad("pad_int2","pad_int2",x1+it,y0+it,x2-it,y2-it);
+		pad_int3->SetPad("pad_int3","pad_int3",x2+it,y0+it,x3-it,y2-it);
+		pad_int0->SetFillColor(0);
+		pad_int1->SetFillColor(0);
+		pad_int2->SetFillColor(0);
+		pad_int3->SetFillColor(0);
+
+		pad_int0->Draw();
+		pad_int1->Draw();
+		pad_int2->Draw();
+		pad_int3->Draw();
+		cInte->Update();
+	}
+	else
+		cInte->Destructor();
+
+
 	if(bkgnd_param==false&&fit_param==false&&twoD_param==false)
 	{
 		visu_param=1;
 		cout<<"Visualisation 1"<<endl;
-		w_canvas*=3;
-		h_canvas*=2;
+		w_canvas=3*size_unit;
+		h_canvas=2*size_unit;
 		cVisu->Destructor();
 		cVisu->Constructor("Visualisation","",w_canvas,h_canvas);
-		cVisu->SetCanvasSize(w_canvas,h_canvas);
+		// cVisu->SetCanvasSize(w_canvas,h_canvas);
 		cVisu->SetWindowSize(w_canvas*1.03,h_canvas*1.03);
 		x0=0.;	y0=0.;	x1=.4;	y1=.5;	x2=.8;	y2=1.;	x3=1.;
 		it=.00;
@@ -786,11 +906,11 @@ int main(int argc, char** argv)
 	{
 		visu_param=2;
 		cout<<"Visualisation 2"<<endl;
-		w_canvas*=4;
-		h_canvas*=3;
+		w_canvas=4*size_unit;
+		h_canvas=3*size_unit;
 		cVisu->Destructor();
 		cVisu->Constructor("Visualisation","",w_canvas,h_canvas);
-		cVisu->SetCanvasSize(w_canvas,h_canvas);
+		// cVisu->SetCanvasSize(w_canvas,h_canvas);
 		cVisu->SetWindowSize(w_canvas*1.03,h_canvas*1.03);
 		x0=0.;	y0=0.;	x1=.4;	y1=.33;	x2=.8;	y2=.66;	x3=1.;	y3=1.;
 		it=.00;
@@ -840,11 +960,11 @@ int main(int argc, char** argv)
 	{
 		visu_param=3;
 		cout<<"Visualisation 3"<<endl;
-		w_canvas*=5;
-		h_canvas*=2;
+		w_canvas=5*size_unit;
+		h_canvas=2*size_unit;
 		cVisu->Destructor();
 		cVisu->Constructor("Visualisation","",w_canvas,h_canvas);
-		cVisu->SetCanvasSize(w_canvas,h_canvas);
+		// cVisu->SetCanvasSize(w_canvas,h_canvas);
 		cVisu->SetWindowSize(w_canvas*1.03,h_canvas*1.03);
 		x0=0.;	y0=0.;	x1=.25;	y1=.5;	x2=.5;	y2=1.;	x3=.875;	x4=1.;
 		it=.00;
@@ -884,11 +1004,11 @@ int main(int argc, char** argv)
 	{
 		visu_param=4;
 		cout<<"Visualisation 4"<<endl;
-		w_canvas*=5;
-		h_canvas*=3;
+		w_canvas=5*size_unit;
+		h_canvas=3*size_unit;
 		cVisu->Destructor();
 		cVisu->Constructor("Visualisation","",w_canvas,h_canvas);
-		cVisu->SetCanvasSize(w_canvas,h_canvas);
+		// cVisu->SetCanvasSize(w_canvas,h_canvas);
 		cVisu->SetWindowSize(w_canvas*1.03,h_canvas*1.03);
 		x0=0.;	y0=0.;	x1=.25;	y1=.33;	x2=.5;	y2=.66;	x3=.875;	y3=1.;	x4=1.;
 		it=.00;
@@ -950,6 +1070,10 @@ int main(int argc, char** argv)
 	TText* Texte=new TText();
 	TLine* fit_line=new TLine();
 	TLine* stop_line=new TLine();
+
+	TH2F* h2DMap_int=new TH2F("h2DMap_int","Map 2D integrale",N_STRIPS,.5,32.5,N_STRIPS,.5,32.5);
+	TH1F* hXint=new TH1F("hXint","Profile integrale in X",N_STRIPS,.5,32.5);
+	TH1F* hYint=new TH1F("hYint","Profile integrale in Y",N_STRIPS,.5,32.5);
 
 	fit_line->SetLineColor(6);
 	fit_line->SetLineWidth(1.5);
@@ -1048,6 +1172,56 @@ int main(int argc, char** argv)
 		h2DMap->Draw("colz");
 	}
 
+	if(integration_used==true)
+	{
+		// cInte->cd();
+		pad_int0->cd();
+		hXint->SetFillColor(2);
+		hXint->GetXaxis()->SetNdivisions(N_STRIPS);
+		hXint->GetXaxis()->SetTickSize(0.01);
+		hXint->GetXaxis()->SetLabelSize(0.0);
+		hXint->GetYaxis()->CenterTitle();
+		hXint->GetYaxis()->SetTickSize(0.01);
+		hXint->GetYaxis()->SetTitleSize(0.0);
+		hXint->GetYaxis()->SetLabelSize(0.035);
+		hXint->SetBarWidth(0.8);
+		hXint->SetBarOffset(0.1);
+		hXint->SetStats(0);
+		hXint->Draw("b");
+		
+		pad_int1->cd();
+		hYint->SetFillColor(2);
+		hYint->GetXaxis()->SetNdivisions(N_STRIPS);
+		hYint->GetXaxis()->SetTickSize(0.01);
+		hYint->GetXaxis()->SetLabelSize(0.0);
+		hYint->GetYaxis()->CenterTitle();
+		hYint->GetYaxis()->SetTickSize(0.01);
+		hYint->GetYaxis()->SetTitleSize(0.0);
+		hYint->GetYaxis()->SetLabelSize(0.035);
+		hYint->SetBarWidth(0.8);
+		hYint->SetBarOffset(0.1);
+		hYint->SetStats(0);
+		hYint->Draw("b");
+
+		pad_int2->cd();
+		h2DMap_int->SetTitle("");//Fluency map (particle/cm2)");
+		h2DMap_int->SetTitleSize(0.0);
+		h2DMap_int->SetStats(0);
+		h2DMap_int->GetXaxis()->SetTitle("Channel X");
+		h2DMap_int->GetXaxis()->SetNdivisions(N_STRIPS);
+		h2DMap_int->GetXaxis()->SetTickSize(0.01);
+		h2DMap_int->GetXaxis()->SetTitleSize(0.036);
+		h2DMap_int->GetXaxis()->CenterTitle();
+		h2DMap_int->GetXaxis()->SetLabelSize(0.02);
+		h2DMap_int->GetYaxis()->SetTitle("Channel Y");
+		h2DMap_int->GetYaxis()->SetNdivisions(N_STRIPS);
+		h2DMap_int->GetYaxis()->SetTickSize(0.01);
+		h2DMap_int->GetYaxis()->SetTitleSize(0.036);
+		h2DMap_int->GetYaxis()->CenterTitle();
+		h2DMap_int->GetYaxis()->SetLabelSize(0.02);
+		h2DMap_int->Draw("colz");
+	}
+
 	writer=faster_file_writer_open(data_faster_out_file.c_str());
 
 	bckg=false;
@@ -1063,38 +1237,38 @@ int main(int argc, char** argv)
 		if(t0==-1)
 			t0=faster_data_clock_sec(data);
 		fasterTime=faster_data_clock_sec(data)-t0;
+		if(t_last_refresh==-1)
+			t_last_refresh=fasterTime;
 		sum_val=0.;
-		PreSFB.clear();
-		PostSFB.clear();
 		label=faster_data_label(data);
 		if(label==LabelX||label==LabelY)
 		{
 			for(int j=FIRST_ELEC;j<LAST_ELEC;j++) 
 			{
+				PreSFBprim.at(j)=PreSFB.at(j);
+				PostSFBprim.at(j)=PostSFB.at(j);
 				faster_data_load(data,&electro);
 				charge=electrometer_channel_charge_pC(electro,j+1);
+				PreSFB.at(j)=charge;
 				switch(label) 
 				{
 					case LabelX:
 						binl=borne_m_x;
 						binr=borne_M_x;
-						PreSFBprim[j]=PreSFB[j];
-						PostSFBprim[j]=PostSFB[j];
-						PreSFB[j]=charge;
 						if(!bckg)
 						{
-							EOFFX[j]+=charge;
+							EOFFX.at(j)+=charge;
 							if(j==FIRST_ELEC)
 								count_eoffx++;
 							sum_val=0.;
-							PostSFB[j]=0.;
+							PostSFB.at(j)=0.;
 						}
 						else
 						{
 							if(bkgnd_param!=false)
-								PreSFB[j]=charge-offXY[j][0];
-							sum_val+=PreSFB[j];
-							PostSFB[j]=PreSFB[j];
+								PreSFB.at(j)=charge-offXY[j][0];
+							sum_val+=PreSFB.at(j);
+							PostSFB.at(j)=PreSFB.at(j);
 						}
 						isLabelX=1;
 					break;
@@ -1102,23 +1276,20 @@ int main(int argc, char** argv)
 					case LabelY:
 						binl=borne_m_y;
 						binr=borne_M_y;
-						PreSFBprim[j]=PreSFB[j];
-						PostSFBprim[j]=PostSFB[j];
-						PreSFB[j]=charge;
 						if(!bckg)
 						{
-							EOFFY[j]+=charge;
+							EOFFY.at(j)+=charge;
 							if(j==FIRST_ELEC)
 								count_eoffy++;
 							sum_val=0.;
-							PostSFB[j]=0.;
+							PostSFB.at(j)=0.;
 						}
 						else
 						{
 							if(bkgnd_param!=false)
-								PreSFB[j]=charge-offXY[j][1];
-							sum_val+=PreSFB[j];
-							PostSFB[j]=PreSFB[j];
+								PreSFB.at(j)=charge-offXY[j][1];
+							sum_val+=PreSFB.at(j);
+							PostSFB.at(j)=PreSFB.at(j);
 						}
 						isLabelY=1;
 					break;
@@ -1127,6 +1298,16 @@ int main(int argc, char** argv)
 			if(bckg&&fit_param==true)
 				SubFittingBackground(binl,binr,&sum_val);
 			charge_totale+=calib*sum_val/2.;
+
+			if(integration_used==true)
+				for(int i=FIRST_ELEC;i<LAST_ELEC;i++)
+				{
+					if(label==LabelX)
+						Integrated_X.at(i)+=PostSFB.at(i);
+					if(label==LabelY)
+						Integrated_Y.at(i)+=PostSFB.at(i);
+				}
+
 		}
 		if(isLabelX==1&&isLabelY==1)
 		{
@@ -1134,12 +1315,14 @@ int main(int argc, char** argv)
 			{
 				for(int j=FIRST_ELEC;j<LAST_ELEC;j++)
 				{
-					offXY[j][0]=EOFFX[j]/count_eoffx;
-					offXY[j][1]=EOFFY[j]/count_eoffy;
+					offXY[j][0]=EOFFX.at(j)/count_eoffx;
+					offXY[j][1]=EOFFY.at(j)/count_eoffy;
 					// cout<<j<<" "<<offXY[j][0]<<" "<<offXY[j][1]<<endl;
 				}
 				bckg=true;
 				cout<<"Offsets électroniques calculés"<<endl;
+				if(t_last_int==-1)
+					t_last_int=fasterTime;
 			}
 			// bckg=true;
 			vect_time_tot[count]=fasterTime;
@@ -1154,8 +1337,9 @@ int main(int argc, char** argv)
 			isLabelX=0;
 			isLabelY=0;
 		
-			if(count%integration==0)
+			if((fasterTime-t_last_refresh)>=refresh_time)
 			{
+				t_last_refresh=fasterTime;
 				// t2=time(NULL);
 				// temps=(float)(t2-t1);
 				// cout<<"Temps "<<temps<<endl;
@@ -1166,14 +1350,14 @@ int main(int argc, char** argv)
 				{
 					if(label==LabelX)
 					{
-						hXbefore->SetBinContent(i+1,PreSFB[i]);
-						hYbefore->SetBinContent(i+1,PreSFBprim[i]);
-						hXafter->SetBinContent(i+1,PostSFB[i]);
-						hYafter->SetBinContent(i+1,PostSFBprim[i]);
+						hXbefore->SetBinContent(i+1,PreSFB.at(i));
+						hYbefore->SetBinContent(i+1,PreSFBprim.at(i));
+						hXafter->SetBinContent(i+1,PostSFB.at(i));
+						hYafter->SetBinContent(i+1,PostSFBprim.at(i));
 						for(int k=0;k<N_STRIPS;k++)
 						{
 							if(sum_val>0.)
-								pixel=PostSFB[i]*PostSFBprim[k]/sum_val;
+								pixel=PostSFB.at(i)*PostSFBprim.at(k)/sum_val;
 							else
 								pixel=0.;
 							h2DMap->SetBinContent(i+1,k+1,pixel);
@@ -1181,14 +1365,14 @@ int main(int argc, char** argv)
 					}
 					if(label==LabelY)
 					{
-						hXbefore->SetBinContent(i+1,PreSFBprim[i]);
-						hYbefore->SetBinContent(i+1,PreSFB[i]);
-						hXafter->SetBinContent(i+1,PostSFBprim[i]);
-						hYafter->SetBinContent(i+1,PostSFB[i]);
+						hXbefore->SetBinContent(i+1,PreSFBprim.at(i));
+						hYbefore->SetBinContent(i+1,PreSFB.at(i));
+						hXafter->SetBinContent(i+1,PostSFBprim.at(i));
+						hYafter->SetBinContent(i+1,PostSFB.at(i));
 						for(int k=0;k<N_STRIPS;k++)
 						{
 							if(sum_val>0.)
-								pixel=PostSFB[i]*PostSFBprim[k]/sum_val;
+								pixel=PostSFB.at(i)*PostSFBprim.at(k)/sum_val;
 							else
 								pixel=0.;
 							h2DMap->SetBinContent(k+1,i+1,pixel);
@@ -1196,6 +1380,7 @@ int main(int argc, char** argv)
 					}
 				}
 
+				// cVisu->cd();
 				pad1->cd();
 				if(fabs(hXbefore->GetBinContent(hXbefore->GetMaximumBin()))<1.&&fabs(hXbefore->GetBinContent(hXbefore->GetMinimumBin()))<1.)
 					hXbefore->GetYaxis()->SetRangeUser(-1.,1.);
@@ -1253,7 +1438,7 @@ int main(int argc, char** argv)
 
 				if(twoD_param==true)
 				{
-					pad6->cd();
+					// pad6->cd();
 					pad6->Modified();
 				}
 
@@ -1283,7 +1468,7 @@ int main(int argc, char** argv)
 
 				pad3->cd();
 				pad3->Clear();
-				xt=.95;
+				xt=.99;
 				yt=.95;
 				ydecal=0.02;
 				Texte->SetTextAlign(31);
@@ -1310,7 +1495,7 @@ int main(int argc, char** argv)
 				yt-=ydecal;
 				Texte->DrawText(xt,yt,"Charge totale");
 				yt-=ydecal;
-				text_tmp.Form("%2.2lf pC",charge_limite);
+				text_tmp.Form("%2.2lf pC",charge_totale);
 				Texte->DrawText(xt,yt,text_tmp);
 				yt-=ydecal;
 				yt-=ydecal;
@@ -1338,75 +1523,61 @@ int main(int argc, char** argv)
 					Texte->DrawText(xt,yt,text_tmp);
 				}
 
-				cVisu->cd();
-				cVisu->Modified();
+				// cVisu->Modified();
+				// cVisu->cd();
 				cVisu->Update();
+
+				if(integration_used==true)
+				{
+					sum_val=0.;
+					for(int i=0;i<N_STRIPS;i++)
+					{
+						hXint->SetBinContent(i+1,Integrated_X.at(i));
+						hYint->SetBinContent(i+1,Integrated_Y.at(i));
+						sum_val+=(Integrated_X.at(i)+Integrated_Y.at(i))/2.;
+					}
+					for(int i=0;i<N_STRIPS;i++)
+					{
+						for(int k=0;k<N_STRIPS;k++)
+						{
+							if(sum_val>0.)
+								pixel=Integrated_X.at(i)*Integrated_Y.at(k)/sum_val;
+							else
+								pixel=0.;
+							h2DMap_int->SetBinContent(i+1,k+1,pixel);
+						}
+					}
+					// cInte->cd();
+					// pad_int0->cd();
+					if(fabs(hXint->GetBinContent(hXint->GetMaximumBin()))<1.&&fabs(hXint->GetBinContent(hXint->GetMinimumBin()))<1.)
+						hXint->GetYaxis()->SetRangeUser(-1.,1.);
+					else
+						hXint->GetYaxis()->UnZoom();
+					pad_int0->Modified();
+
+					// pad_int1->cd();
+					if(fabs(hYint->GetBinContent(hYint->GetMaximumBin()))<1.&&fabs(hYint->GetBinContent(hYint->GetMinimumBin()))<1.)
+						hYint->GetYaxis()->SetRangeUser(-1.,1.);
+					else
+						hYint->GetYaxis()->UnZoom();
+					pad_int1->Modified();
+
+					// pad_int2->cd();
+					pad_int2->Modified();
+
+					// cInte->cd();
+					cInte->Update();
+				}
+			}
+			if((fasterTime-t_last_int)>=integration_time)
+			{
+				t_last_int=fasterTime;
+				Integrated_X.clear();
+				Integrated_X.resize(N_STRIPS);
+				Integrated_Y.clear();
+				Integrated_Y.resize(N_STRIPS);
 			}
 		}
-	}
-	vect_time_tot[0]=1.;
-	vect_charge_cumul[0]=10.;
-	count=2;
-	for(int i=0;i<N_STRIPS;i++)
-		for(int j=0;j<N_STRIPS;j++)
-			h2DMap->SetBinContent(i+1,j+1,i+j);
-
-
-	pad3->cd();
-	pad3->Clear();
-	xt=.99;
-	yt=.95;
-	ydecal=.01;
-	Texte->SetTextAlign(31);
-	Texte->SetTextFont(43);
-	Texte->SetTextSize(15);
-	if(!bckg)
-	{
-		Texte->SetTextColor(2);
-		Texte->DrawText(xt,yt,"Acquisition");
-		yt-=ydecal;
-		Texte->DrawText(xt,yt,"bruit electronique");
-		yt-=ydecal;
-		text_tmp.Form("%2.2lf sec",bound_eoff-time_limit);
-		Texte->DrawText(xt,yt,text_tmp);
-		yt-=ydecal;
-		yt-=ydecal;
-	}
-	Texte->SetTextColor(1);
-	Texte->DrawText(xt,yt,"Charge limite");
-	yt-=ydecal;
-	text_tmp.Form("%2.2lf pC",dose_limit);
-	Texte->DrawText(xt,yt,text_tmp);
-	yt-=ydecal;
-	yt-=ydecal;
-	Texte->DrawText(xt,yt,"Charge totale");
-	yt-=ydecal;
-	text_tmp.Form("%2.2lf pC",charge_limite);
-	Texte->DrawText(xt,yt,text_tmp);
-	yt-=ydecal;
-	yt-=ydecal;
-	Texte->DrawText(xt,yt,"Temps d'Irradiation");
-	yt-=ydecal;
-	text_tmp.Form("%2.2lf sec",time_limit);
-	Texte->DrawText(xt,yt,text_tmp);
-	if(brkg_condition==true)
-	{
-		Texte->SetTextColor(2);
-		yt-=ydecal;
-		yt-=ydecal;
-		Texte->DrawText(xt,yt,"Limite atteinte");
-		yt-=ydecal;
-		yt-=ydecal;
-		Texte->DrawText(xt,yt,"Charge totale");
-		yt-=ydecal;
-		text_tmp.Form("%2.2lf pC",charge_totale);
-		Texte->DrawText(xt,yt,text_tmp);
-		yt-=ydecal;
-		yt-=ydecal;
-		Texte->DrawText(xt,yt,"Temps d'Irradiation");
-		yt-=ydecal;
-		text_tmp.Form("%2.2lf sec",fasterTime);
-		Texte->DrawText(xt,yt,text_tmp);
 	}
 	cVisu->SaveAs("Image_finale.png");
 
