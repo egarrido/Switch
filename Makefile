@@ -24,7 +24,7 @@ EXE    = $(SRCEXE:.C=)
 all : $(EXE)
 
 $(EXE): $(SRCEXE)
-	${CC} $@.C -o $@ ${INCFLAGS} ${CFLAGS} ${LIBS} -w
+	${CC} $@.C -o $@ ${INCFLAGS} ${CFLAGS} ${LIBS} -w -std=c++11
 
 clean :
 	rm -f *.o

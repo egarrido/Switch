@@ -4,13 +4,13 @@ Output file: Out_file.fast
 Path for the file: ./Output/
 Background extraction: yes
 Acquisition time for electronic offset (s): 10.
-Fitting function: yes
+Fitting function: no
 Exclusion strips X: 15 20
 Exclusion strips Y: 15 20
 Calibrate data: 0.01
 Particle energy: 100.
-Map 2D: yes
-Limit: file s Entry/Limit.txt
+Map 2D: no
+Limit: no
 Refreshing time (s): 1.
 Smoothing: no
-Integration: 100. ms
+Integration: no
