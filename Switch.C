@@ -996,12 +996,12 @@ int main(int argc, char** argv)
 			inter_fasterTime=(fasterTime-last_fasterTime)*1.E6;
 			if(microseconds>inter_fasterTime&&inter_fasterTime>0.)
 			{
-				cout<<fasterTime<<endl;
+				// cout<<fasterTime<<endl;
 				temps+=microseconds/1.E6;
 				count_foireux++;
-				cout<<"Ca tient pas la route, ça tient pas la route "<<setprecision(1)<<fixed<<microseconds<<" "<<inter_fasterTime<<endl;
-				cout<<tot_prog_milli<<" "<<tot_fasterTime_milli<<endl;
-				cout<<time_span_tot.count()/1E6<<endl;
+				// cout<<"Ca tient pas la route, ça tient pas la route "<<setprecision(1)<<fixed<<microseconds<<" "<<inter_fasterTime<<endl;
+				// cout<<tot_prog_milli<<" "<<tot_fasterTime_milli<<endl;
+				// cout<<time_span_tot.count()/1E6<<endl;
 			}
 			tot_prog_milli+=(int)microseconds/1000;
 			tot_fasterTime_milli+=(int)inter_fasterTime/1000;

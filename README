@@ -1,0 +1,78 @@
+**************************************************************************************************
+*                                                                                                *
+*                         Programme de controle en ligne FASTER                                  *
+*                                                                                                *
+**************************************************************************************************
+
+/!\ Programme en cours de développement, des tests sont à effectuer, notamment pour voir si les /!\
+/!\ temps nécessaires aux calculs et affichage n'empiètent pas trop sur celui de l'acquisition  /!\
+/!\ Le programme JJG permet de relancer un fichier FASTER précédemment acquis afin de réaliser  /!\
+/!\ tests. La version Switch est une version sans visualisation, donc normalement plus rapide   /!\
+/!\ mais cela fait parti des choses à vérifier.                                                 /!\
+
+Le dossier doit contenir les fichiers :
+	Switch            - exécutable.
+	Switch.C          - fichier source.
+	Switch_ROOT       - exécutable.
+	Switch_ROOT.C     - fichier source.
+	Switch.h          - librairie.
+	Makefile             
+	Offset.txt        - valeurs par défaut des offset électroniques.
+	JJG               - exécutable.
+	JJG.C             - fichier source.
+	Switch_shell.sh   - crée le tube.
+
+  Pour changer l'utilisation des label il faut modifier les lignes correspondantes dans la
+  libraire Switch.h
+
+Les sous-dossiers :
+	Entry/    - Contient les fichiers d'entrée de toutes les différentes configurations
+	Ouput/    - Contient les fichiers de sortie.
+
+L'exécution du programme se fait en tapant la commande
+	./Switch
+  
+Le fichier de paramètres d'entrée se compose de la sorte
+
+	Tube: Nom du tube qui va être utilisé.
+
+	Path for the tube: Chemin vers le dossier contenant le tube.
+
+	Output file: Nom du fichier faster créé en sortie.
+
+	Path for the file: Chemin vers le dossier pour stocker le fichier faster en sortie.
+
+	Background extraction: Extraction du bruit de fond "yes" ou "no".
+
+	Acquisition time for electronic offset (s): Intégrale de temps sur laquelle est fait le calcul
+	des offset électroniques.
+
+	Fitting function: Utilisation ou non d'une fonction d'ajustement des données effectuée sur
+	chaque pas, "yes" ou "no".
+
+	Exclusion strips X: Valeurs de strips en X entre lesquelles l'ajustement interpole le zéro 
+	moyen. Typiquement ce sont les strips sur lesquelles un signal est observé.
+
+	Exclusion strips Y: Pareil que "Exclusion strips X" mais pour Y.
+
+	Calibrate data: Paramètre de calibrage utilisé, peut être des données (prédéfinies, 'file'
+	suivi du chemin vers le fichier, 'multiple' suivi des valeurs), une valeur, rien ('nothing').
+
+	Particle energy: Energie(s) des particules, peut être une série de valeurs ('file' suivi du
+	chemin vers le fichier, multiple' suivi des valeurs), une valeur, rien ('nothing'),
+	cette donnée est utilisée en cas d'absence de valeur de calibrage.
+
+	Map 2D: Création ou non d'une carte 2D en temps réel, "yes" ou "no".
+
+	Limit: Définition des limites auxquelles l'irradiation doit s'arrêter. Il est possible d'en
+	définir plusieurs en indiquant le lien vers le fichier.
+
+	Refreshing time (s): Durée en seconde de la durée entre deux affichages.
+
+	Integration: Calcul d'une valeur intégrale de l'irradiation.
+
+	Smoothing: Utilise des valeurs pré-calculées pour chaque Dosion afin de lisser la réponse des
+	pistes. Dans le cas d'une utilisation, il faut indiquer le nom du fichier après le "yes".
+
+L'ordre dans le fichier d'entrée n'a pas d'importance. Il n'est pas non plus obligatoire de mettre
+toutes les lignes, dans le cas contraire, la valeur par défaut utilisée sera de 0.
